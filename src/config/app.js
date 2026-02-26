@@ -1,31 +1,21 @@
+const path = require('path');
 const express = require('express');
 const cors = require('cors');
 
-const healthRouter = require('../routes/health.routes');
+const routes = require('../routes');
+const notFound = require('../middleware/notFound');
+const errorHandler = require('../middleware/errorHandler');
 
 const app = express();
 
-// Global middlewares
 app.use(cors());
 app.use(express.json());
+app.use('/uploads', express.static(path.join(process.cwd(), 'uploads')));
 
-// Routes
-app.use('/api/health', healthRouter);
+app.use('/api', routes);
 
-// 404 handler
-app.use((req, res, next) => {
-  res.status(404).json({ message: 'Route not found' });
-});
-
-// Global error handler
-// eslint-disable-next-line no-unused-vars
-app.use((err, req, res, next) => {
-  console.error(err);
-  const status = err.statusCode || 500;
-  res.status(status).json({
-    message: err.message || 'Internal server error',
-  });
-});
+app.use(notFound);
+app.use(errorHandler);
 
 module.exports = app;
 

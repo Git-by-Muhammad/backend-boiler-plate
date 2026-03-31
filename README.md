@@ -274,6 +274,21 @@ Response format:
   - GitHub Actions workflow at `.github/workflows/ci.yml`
   - Runs lint (`npm run lint`), tests (`npm run test`), and security scan (`npm audit --audit-level=high`)
 
+## Postman Testing
+
+- Collection: `postman/Backend-Boilerplate-API.postman_collection.json`
+- Environment: `postman/Backend-Boilerplate.local.postman_environment.json`
+- Suggested run order:
+  1. Run seed data (`npm run seed`) so admin login works.
+  2. In Postman, import collection + environment and select the environment.
+  3. Run folders in order (`00` to `09`) to validate full lifecycle:
+     - health/docs
+     - auth register/login/me/refresh
+     - admin diagnostics/users
+     - uploads
+     - items/products/orders/tickets/blog
+     - logout/revocation
+
 ## Quick Usage Examples
 
 Register:

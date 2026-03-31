@@ -1,29 +1,145 @@
 {
   "info": {
-    "name": "Backend Boilerplate API",
-    "description": "Health, upload (single/multiple), and Items CRUD",
+    "name": "Backend Boilerplate API (Full E2E)",
+    "description": "Full test collection for auth lifecycle, health, docs, upload, RBAC, CRUD modules, diagnostics, and token rotation.",
     "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
   },
   "variable": [
     { "key": "baseUrl", "value": "http://localhost:5000" },
-    { "key": "itemId", "value": "" }
+    { "key": "accessToken", "value": "" },
+    { "key": "refreshToken", "value": "" },
+    { "key": "correlationId", "value": "postman-e2e-run" },
+    { "key": "adminEmail", "value": "admin@example.com" },
+    { "key": "adminPassword", "value": "Admin@12345" },
+    { "key": "userEmail", "value": "user@example.com" },
+    { "key": "userPassword", "value": "User@12345" },
+    { "key": "itemId", "value": "" },
+    { "key": "productId", "value": "" },
+    { "key": "orderId", "value": "" },
+    { "key": "ticketId", "value": "" },
+    { "key": "postId", "value": "" },
+    { "key": "commentId", "value": "" }
   ],
   "item": [
     {
-      "name": "Health",
+      "name": "00 - System",
       "item": [
         {
-          "name": "Health Check",
+          "name": "Health",
+          "request": {
+            "method": "GET",
+            "header": [{ "key": "x-correlation-id", "value": "{{correlationId}}" }],
+            "url": "{{baseUrl}}/api/v1/health"
+          }
+        },
+        {
+          "name": "Swagger Docs",
           "request": {
             "method": "GET",
             "header": [],
-            "url": "{{baseUrl}}/api/health"
+            "url": "{{baseUrl}}/api/v1/docs"
           }
         }
       ]
     },
     {
-      "name": "Upload",
+      "name": "01 - Auth Lifecycle",
+      "item": [
+        {
+          "name": "Register User",
+          "request": {
+            "method": "POST",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"email\": \"{{userEmail}}\",\n  \"password\": \"{{userPassword}}\",\n  \"name\": \"Regular User\"\n}"
+            },
+            "url": "{{baseUrl}}/api/v1/auth/register"
+          }
+        },
+        {
+          "name": "Login Admin",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "const res = pm.response.json();",
+                  "if (res.accessToken) pm.collectionVariables.set('accessToken', res.accessToken);",
+                  "if (res.refreshToken) pm.collectionVariables.set('refreshToken', res.refreshToken);"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"email\": \"{{adminEmail}}\",\n  \"password\": \"{{adminPassword}}\"\n}"
+            },
+            "url": "{{baseUrl}}/api/v1/auth/login"
+          }
+        },
+        {
+          "name": "Me",
+          "request": {
+            "method": "GET",
+            "header": [{ "key": "Authorization", "value": "Bearer {{accessToken}}" }],
+            "url": "{{baseUrl}}/api/v1/auth/me"
+          }
+        },
+        {
+          "name": "Refresh Tokens",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "const res = pm.response.json();",
+                  "if (res.accessToken) pm.collectionVariables.set('accessToken', res.accessToken);",
+                  "if (res.refreshToken) pm.collectionVariables.set('refreshToken', res.refreshToken);"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"refreshToken\": \"{{refreshToken}}\"\n}"
+            },
+            "url": "{{baseUrl}}/api/v1/auth/refresh"
+          }
+        }
+      ]
+    },
+    {
+      "name": "02 - Admin Protected",
+      "item": [
+        {
+          "name": "Admin Diagnostics",
+          "request": {
+            "method": "GET",
+            "header": [{ "key": "Authorization", "value": "Bearer {{accessToken}}" }],
+            "url": "{{baseUrl}}/api/v1/admin/diagnostics"
+          }
+        },
+        {
+          "name": "List Users",
+          "request": {
+            "method": "GET",
+            "header": [{ "key": "Authorization", "value": "Bearer {{accessToken}}" }],
+            "url": "{{baseUrl}}/api/v1/users?page=1&limit=10"
+          }
+        }
+      ]
+    },
+    {
+      "name": "03 - Upload",
       "item": [
         {
           "name": "Upload Single",
@@ -32,11 +148,9 @@
             "header": [],
             "body": {
               "mode": "formdata",
-              "formdata": [
-                { "key": "file", "type": "file", "src": "" }
-              ]
+              "formdata": [{ "key": "file", "type": "file", "src": "" }]
             },
-            "url": "{{baseUrl}}/api/upload/single"
+            "url": "{{baseUrl}}/api/v1/upload/single"
           }
         },
         {
@@ -51,53 +165,44 @@
                 { "key": "files", "type": "file", "src": "" }
               ]
             },
-            "url": "{{baseUrl}}/api/upload/multiple"
+            "url": "{{baseUrl}}/api/v1/upload/multiple"
           }
         }
       ]
     },
     {
-      "name": "Items",
+      "name": "04 - Items (Public Read, Admin Write)",
       "item": [
         {
-          "name": "Create Item",
+          "name": "Create Item (Admin)",
           "event": [
             {
               "listen": "test",
               "script": {
+                "type": "text/javascript",
                 "exec": [
                   "const res = pm.response.json();",
-                  "if (res._id) pm.collectionVariables.set('itemId', res._id);"
-                ],
-                "type": "text/javascript"
+                  "if (res._id || res.id) pm.collectionVariables.set('itemId', res._id || res.id);"
+                ]
               }
             }
           ],
           "request": {
             "method": "POST",
-            "header": [{ "key": "Content-Type", "value": "application/json" }],
-            "body": {
-              "mode": "raw",
-              "raw": "{\n  \"name\": \"Test Item\",\n  \"description\": \"Created from Postman\",\n  \"imageUrl\": \"\"\n}"
-            },
-            "url": "{{baseUrl}}/api/items"
+            "header": [
+              { "key": "Authorization", "value": "Bearer {{accessToken}}" },
+              { "key": "Content-Type", "value": "application/json" }
+            ],
+            "body": { "mode": "raw", "raw": "{\n  \"name\": \"Item A\",\n  \"description\": \"Admin created\"\n}" },
+            "url": "{{baseUrl}}/api/v1/items"
           }
         },
         {
-          "name": "List Items",
+          "name": "List Items (Public)",
           "request": {
             "method": "GET",
             "header": [],
-            "url": {
-              "raw": "{{baseUrl}}/api/items?page=1&limit=10&sort=-createdAt",
-              "host": ["{{baseUrl}}"],
-              "path": ["api", "items"],
-              "query": [
-                { "key": "page", "value": "1" },
-                { "key": "limit", "value": "10" },
-                { "key": "sort", "value": "-createdAt" }
-              ]
-            }
+            "url": "{{baseUrl}}/api/v1/items?page=1&limit=10&sort=-createdAt"
           }
         },
         {
@@ -105,27 +210,211 @@
           "request": {
             "method": "GET",
             "header": [],
-            "url": "{{baseUrl}}/api/items/{{itemId}}"
+            "url": "{{baseUrl}}/api/v1/items/{{itemId}}"
           }
-        },
+        }
+      ]
+    },
+    {
+      "name": "05 - Products (Public Read, Admin Write)",
+      "item": [
         {
-          "name": "Update Item",
+          "name": "Create Product (Admin)",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "const res = pm.response.json();",
+                  "if (res._id || res.id) pm.collectionVariables.set('productId', res._id || res.id);"
+                ]
+              }
+            }
+          ],
           "request": {
-            "method": "PATCH",
-            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "method": "POST",
+            "header": [
+              { "key": "Authorization", "value": "Bearer {{accessToken}}" },
+              { "key": "Content-Type", "value": "application/json" }
+            ],
             "body": {
               "mode": "raw",
-              "raw": "{\n  \"name\": \"Updated Item\",\n  \"description\": \"Updated from Postman\"\n}"
+              "raw": "{\n  \"name\": \"Product A\",\n  \"description\": \"Enterprise test\",\n  \"price\": 120,\n  \"stock\": 25,\n  \"active\": true\n}"
             },
-            "url": "{{baseUrl}}/api/items/{{itemId}}"
+            "url": "{{baseUrl}}/api/v1/products"
           }
         },
         {
-          "name": "Delete Item",
+          "name": "List Products (Public)",
           "request": {
-            "method": "DELETE",
+            "method": "GET",
             "header": [],
-            "url": "{{baseUrl}}/api/items/{{itemId}}"
+            "url": "{{baseUrl}}/api/v1/products?page=1&limit=10&priceMin=50&priceMax=500"
+          }
+        }
+      ]
+    },
+    {
+      "name": "06 - Orders (Owner/Admin)",
+      "item": [
+        {
+          "name": "Create Order (Admin Token)",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "const res = pm.response.json();",
+                  "if (res._id || res.id) pm.collectionVariables.set('orderId', res._id || res.id);"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              { "key": "Authorization", "value": "Bearer {{accessToken}}" },
+              { "key": "Content-Type", "value": "application/json" }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"items\": [{ \"product\": \"{{productId}}\", \"quantity\": 1, \"unitPrice\": 120 }],\n  \"total\": 120,\n  \"status\": \"pending\"\n}"
+            },
+            "url": "{{baseUrl}}/api/v1/orders"
+          }
+        },
+        {
+          "name": "List Orders",
+          "request": {
+            "method": "GET",
+            "header": [{ "key": "Authorization", "value": "Bearer {{accessToken}}" }],
+            "url": "{{baseUrl}}/api/v1/orders?page=1&limit=10"
+          }
+        }
+      ]
+    },
+    {
+      "name": "07 - Tickets (Owner/Admin)",
+      "item": [
+        {
+          "name": "Create Ticket",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "const res = pm.response.json();",
+                  "if (res._id || res.id) pm.collectionVariables.set('ticketId', res._id || res.id);"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              { "key": "Authorization", "value": "Bearer {{accessToken}}" },
+              { "key": "Content-Type", "value": "application/json" }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"subject\": \"Need support\",\n  \"body\": \"Testing ticket flow\",\n  \"priority\": \"medium\"\n}"
+            },
+            "url": "{{baseUrl}}/api/v1/tickets"
+          }
+        },
+        {
+          "name": "List Tickets",
+          "request": {
+            "method": "GET",
+            "header": [{ "key": "Authorization", "value": "Bearer {{accessToken}}" }],
+            "url": "{{baseUrl}}/api/v1/tickets?page=1&limit=10"
+          }
+        }
+      ]
+    },
+    {
+      "name": "08 - Blog (Public Read, Owner/Admin Write)",
+      "item": [
+        {
+          "name": "Create Post",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "const res = pm.response.json();",
+                  "if (res._id || res.id) pm.collectionVariables.set('postId', res._id || res.id);"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              { "key": "Authorization", "value": "Bearer {{accessToken}}" },
+              { "key": "Content-Type", "value": "application/json" }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"title\": \"Postman Enterprise Test\",\n  \"content\": \"Blog flow test\",\n  \"tags\": [\"test\", \"postman\"],\n  \"published\": true\n}"
+            },
+            "url": "{{baseUrl}}/api/v1/blog/posts"
+          }
+        },
+        {
+          "name": "Create Comment",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "const res = pm.response.json();",
+                  "if (res._id || res.id) pm.collectionVariables.set('commentId', res._id || res.id);"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              { "key": "Authorization", "value": "Bearer {{accessToken}}" },
+              { "key": "Content-Type", "value": "application/json" }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"post\": \"{{postId}}\",\n  \"content\": \"Looks good!\"\n}"
+            },
+            "url": "{{baseUrl}}/api/v1/blog/comments"
+          }
+        },
+        {
+          "name": "List Posts (Public)",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": "{{baseUrl}}/api/v1/blog/posts?page=1&limit=10"
+          }
+        }
+      ]
+    },
+    {
+      "name": "09 - Logout",
+      "item": [
+        {
+          "name": "Logout and Revoke Tokens",
+          "request": {
+            "method": "POST",
+            "header": [
+              { "key": "Authorization", "value": "Bearer {{accessToken}}" },
+              { "key": "Content-Type", "value": "application/json" }
+            ],
+            "body": { "mode": "raw", "raw": "{\n  \"refreshToken\": \"{{refreshToken}}\"\n}" },
+            "url": "{{baseUrl}}/api/v1/auth/logout"
           }
         }
       ]

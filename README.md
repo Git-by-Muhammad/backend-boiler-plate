@@ -93,7 +93,7 @@ src/
     blog.validation.js
 ```
 
-## Setup
+## Setup (Local)
 
 1. Install dependencies:
    - `npm install`
@@ -107,6 +107,16 @@ src/
 5. (Optional) Seed initial data:
    - `npm run seed`
    - `npm run seed:reset` (wipes and reseeds)
+
+## Setup (Docker)
+
+1. Ensure `.env` exists (copy from `.env.example`).
+2. Build and run:
+   - `docker compose up --build`
+3. API will be available at:
+   - `http://localhost:5000/api/v1`
+4. Swagger UI:
+   - `http://localhost:5000/api/v1/docs`
 
 ## Environment Variables
 
@@ -246,6 +256,15 @@ Response format:
 - Admin diagnostics endpoint remains role-protected at `/api/v1/admin/diagnostics`.
 - Seed script creates/updates admin user and baseline test data for fast onboarding.
 
+## Security and Ops Checklist
+
+- Set strong secrets in production (`JWT_SECRET`, DB credentials).
+- Keep `NODE_ENV=production` in deployment.
+- Use HTTPS termination at load balancer/reverse proxy.
+- Restrict CORS origins in production.
+- Monitor logs and audit entries with a centralized log collector.
+- Run CI checks before merge (`lint`, `test`, `npm audit`).
+
 ## DevOps and Delivery
 
 - Docker:
@@ -271,6 +290,14 @@ Login:
 curl -X POST http://localhost:5000/api/v1/auth/login \
   -H "Content-Type: application/json" \
   -d "{\"email\":\"admin@example.com\",\"password\":\"secret123\"}"
+```
+
+Refresh:
+
+```bash
+curl -X POST http://localhost:5000/api/v1/auth/refresh \
+  -H "Content-Type: application/json" \
+  -d "{\"refreshToken\":\"<REFRESH_TOKEN>\"}"
 ```
 
 Paginated products:

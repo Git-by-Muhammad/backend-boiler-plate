@@ -1,0 +1,42 @@
+const asyncHandler = require('../../utils/asyncHandler');
+const { register, login } = require('./auth.service');
+const User = require('../../models/user.model');
+
+const registerController = asyncHandler(async (req, res) => {
+  const user = await register(req.body);
+  res.status(201).json({
+    id: user.id,
+    email: user.email,
+    name: user.name,
+    role: user.role,
+  });
+});
+
+const loginController = asyncHandler(async (req, res) => {
+  const { user, token } = await login(req.body);
+  res.json({
+    token,
+    user: {
+      id: user.id,
+      email: user.email,
+      name: user.name,
+      role: user.role,
+    },
+  });
+});
+
+const meController = asyncHandler(async (req, res) => {
+  const user = await User.findById(req.user.id).lean();
+  if (!user) {
+    return res.status(404).json({ message: 'User not found' });
+  }
+  res.json({
+    id: user._id,
+    email: user.email,
+    name: user.name,
+    role: user.role,
+  });
+});
+
+module.exports = { registerController, loginController, meController };
+

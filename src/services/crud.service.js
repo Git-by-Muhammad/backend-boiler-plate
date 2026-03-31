@@ -1,5 +1,36 @@
 const ApiError = require('../utils/ApiError');
 
+const toBooleanIfPossible = (value) => {
+  if (value === 'true') return true;
+  if (value === 'false') return false;
+  return value;
+};
+
+const buildFilterQuery = (query = {}) => {
+  const mongoQuery = {};
+  for (const [key, rawValue] of Object.entries(query)) {
+    if (rawValue === undefined || rawValue === null || rawValue === '') continue;
+
+    if (key.endsWith('Min')) {
+      const field = key.slice(0, -3);
+      mongoQuery[field] = { ...(mongoQuery[field] || {}), $gte: Number(rawValue) };
+      continue;
+    }
+    if (key.endsWith('Max')) {
+      const field = key.slice(0, -3);
+      mongoQuery[field] = { ...(mongoQuery[field] || {}), $lte: Number(rawValue) };
+      continue;
+    }
+    if (key.endsWith('Like')) {
+      const field = key.slice(0, -4);
+      mongoQuery[field] = { $regex: String(rawValue), $options: 'i' };
+      continue;
+    }
+    mongoQuery[key] = toBooleanIfPossible(rawValue);
+  }
+  return mongoQuery;
+};
+
 function createCrudService(Model) {
   return {
     async create(body) {
@@ -11,11 +42,32 @@ function createCrudService(Model) {
       return doc;
     },
     async getAll(query = {}, options = {}) {
-      const { page = 1, limit = 20, sort = '-createdAt' } = options;
+      const { page = 1, limit = 20, sort = '-createdAt', fields, populate, search } = options;
       const skip = (Number(page) - 1) * Number(limit);
+      const mongoQuery = buildFilterQuery(query);
+      let findQuery = Model.find(mongoQuery);
+
+      if (search) {
+        const searchRegex = new RegExp(search, 'i');
+        findQuery = findQuery.or([
+          { name: searchRegex },
+          { title: searchRegex },
+          { email: searchRegex },
+          { subject: searchRegex },
+        ]);
+      }
+
+      if (fields) findQuery = findQuery.select(String(fields).split(',').join(' '));
+      if (populate) {
+        const populateFields = String(populate).split(',').map((p) => p.trim()).filter(Boolean);
+        for (const path of populateFields) {
+          findQuery = findQuery.populate(path);
+        }
+      }
+
       const [data, total] = await Promise.all([
-        Model.find(query).sort(sort).skip(skip).limit(Number(limit)).lean(),
-        Model.countDocuments(query),
+        findQuery.sort(sort).skip(skip).limit(Number(limit)).lean(),
+        Model.countDocuments(mongoQuery),
       ]);
       return { data, total, page: Number(page), limit: Number(limit) };
     },

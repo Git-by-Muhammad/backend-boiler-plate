@@ -116,6 +116,10 @@ src/
 - `MONGO_URI` - MongoDB connection string
 - `JWT_SECRET` - signing secret for access tokens
 - `JWT_EXPIRES_IN` - token TTL (example: `1h`)
+- `JWT_REFRESH_EXPIRES_IN` - refresh token TTL (example: `7d`)
+- `RATE_LIMIT_WINDOW_MS` - rate limiter window (default 15 minutes)
+- `RATE_LIMIT_MAX` - max API requests per window
+- `AUTH_RATE_LIMIT_MAX` - max auth requests per window
 
 ## API Overview
 
@@ -128,7 +132,10 @@ src/
 
 - `POST /api/v1/auth/register`
 - `POST /api/v1/auth/login`
+- `POST /api/v1/auth/refresh`
+- `POST /api/v1/auth/logout`
 - `GET /api/v1/auth/me` (requires Bearer token)
+- `GET /api/v1/docs` - Swagger UI
 
 ### Upload
 
@@ -141,11 +148,11 @@ All are RESTful CRUD endpoints:
 
 - `items` - `/api/v1/items`
 - `users` - `/api/v1/users` (admin protected)
-- `products` - `/api/v1/products` (authenticated)
-- `orders` - `/api/v1/orders` (authenticated)
-- `tickets` - `/api/v1/tickets` (authenticated)
-- `blog posts` - `/api/v1/blog/posts` (authenticated)
-- `blog comments` - `/api/v1/blog/comments` (authenticated)
+- `products` - `/api/v1/products` (public read, admin write)
+- `orders` - `/api/v1/orders` (owner/admin access control)
+- `tickets` - `/api/v1/tickets` (owner/admin access control)
+- `blog posts` - `/api/v1/blog/posts` (public read, owner/admin write)
+- `blog comments` - `/api/v1/blog/comments` (public read, owner/admin write)
 
 ## Querying and Pagination
 
@@ -227,12 +234,26 @@ Response format:
 
 - Sensitive fields such as `passwordHash` are sanitized from CRUD and auth responses.
 - User admin CRUD accepts `password` input and hashes it server-side before persisting.
+- Access + refresh JWT pair with refresh token rotation and revocation persistence.
+- Revoked access tokens are denied on authenticated endpoints.
 - RBAC is enforced per operation using route-level middlewares:
   - `items`/`products`: public read, admin write/delete.
   - `orders`/`tickets`: authenticated, owner-or-admin read/update/delete, owner auto-assigned on create.
   - `blog posts/comments`: public read, authenticated create, owner-or-admin update/delete.
+- Security middlewares include `helmet`, `compression`, and global/auth-specific rate limiting.
+- Every request includes correlation ID support via `x-correlation-id`.
+- Non-read operations produce audit log entries with sensitive fields redacted.
 - Admin diagnostics endpoint remains role-protected at `/api/v1/admin/diagnostics`.
 - Seed script creates/updates admin user and baseline test data for fast onboarding.
+
+## DevOps and Delivery
+
+- Docker:
+  - Build and run with `docker compose up --build`
+  - Services included: `app`, `mongo`, `redis`
+- CI:
+  - GitHub Actions workflow at `.github/workflows/ci.yml`
+  - Runs lint (`npm run lint`), tests (`npm run test`), and security scan (`npm audit --audit-level=high`)
 
 ## Quick Usage Examples
 

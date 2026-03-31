@@ -12,7 +12,11 @@ const env = {
   mongoUri: required('MONGO_URI'),
   jwtSecret: required('JWT_SECRET'),
   jwtExpiresIn: process.env.JWT_EXPIRES_IN || '1h',
+  jwtRefreshExpiresIn: process.env.JWT_REFRESH_EXPIRES_IN || '7d',
   logLevel: process.env.LOG_LEVEL || 'info',
+  rateLimitWindowMs: Number(process.env.RATE_LIMIT_WINDOW_MS) || 900000,
+  rateLimitMax: Number(process.env.RATE_LIMIT_MAX) || 300,
+  authRateLimitMax: Number(process.env.AUTH_RATE_LIMIT_MAX) || 20,
 };
 
 module.exports = env;

@@ -1,7 +1,7 @@
 const logger = require('../utils/logger');
 const env = require('../config/env');
 
-const errorHandler = (err, req, res, next) => {
+const errorHandler = (err, req, res, _next) => {
   logger.error(err);
   let statusCode = err.statusCode || 500;
   if (err.code && err.code.startsWith('LIMIT_')) statusCode = 400;

@@ -11,14 +11,16 @@ const requestLogger = (req, res, next) => {
     try {
       const payload = jwt.verify(authHeader.slice(7), env.jwtSecret);
       userId = payload.sub || 'anonymous';
-    } catch (err) {
+    } catch {
       userId = 'anonymous';
     }
   }
 
   res.on('finish', () => {
     const durationMs = Date.now() - start;
-    logger.info(`${req.method} ${req.originalUrl} ${res.statusCode} ${durationMs}ms user=${userId}`);
+    logger.info(
+      `${req.method} ${req.originalUrl} ${res.statusCode} ${durationMs}ms user=${userId} correlationId=${req.correlationId}`
+    );
   });
 
   next();

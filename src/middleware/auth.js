@@ -1,8 +1,9 @@
 const jwt = require('jsonwebtoken');
 const env = require('../config/env');
 const ApiError = require('../utils/ApiError');
+const { isAccessTokenRevoked } = require('../services/token.service');
 
-const authenticate = (req, res, next) => {
+const authenticate = async (req, res, next) => {
   const header = req.headers.authorization || '';
   const token = header.startsWith('Bearer ') ? header.slice(7) : null;
 
@@ -12,9 +13,22 @@ const authenticate = (req, res, next) => {
 
   try {
     const payload = jwt.verify(token, env.jwtSecret);
-    req.user = { id: payload.sub, role: payload.role, email: payload.email };
+    if (payload.type && payload.type !== 'access') {
+      return next(new ApiError(401, 'Invalid token type'));
+    }
+    const revoked = await isAccessTokenRevoked(payload.jti);
+    if (revoked) {
+      return next(new ApiError(401, 'Token has been revoked'));
+    }
+    req.user = {
+      id: payload.sub,
+      role: payload.role,
+      email: payload.email,
+      tokenId: payload.jti,
+      expiresAt: payload.exp,
+    };
     return next();
-  } catch (err) {
+  } catch {
     return next(new ApiError(401, 'Invalid or expired token'));
   }
 };

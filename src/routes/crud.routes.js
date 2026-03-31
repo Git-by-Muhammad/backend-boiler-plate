@@ -4,7 +4,7 @@ const { createCrudService } = require('../services/crud.service');
 const validate = require('../middleware/validate');
 
 function createCrudRoutes(Model, options = {}) {
-  const { pathPrefix = '', validation = {} } = options;
+  const { pathPrefix = '', validation = {}, middlewares = {} } = options;
   const router = express.Router({ mergeParams: true });
   const service = createCrudService(Model);
   const controller = createCrudController(service);
@@ -13,13 +13,18 @@ function createCrudRoutes(Model, options = {}) {
   const updateValidator = validation.update ? [validate({ body: validation.update })] : [];
   const listValidator = validation.list ? [validate({ query: validation.list })] : [];
   const idValidator = validation.id ? [validate({ params: validation.id })] : [];
+  const createMiddlewares = middlewares.create || [];
+  const listMiddlewares = middlewares.list || [];
+  const getByIdMiddlewares = middlewares.getById || [];
+  const updateMiddlewares = middlewares.update || [];
+  const removeMiddlewares = middlewares.remove || [];
 
-  router.post(pathPrefix || '/', ...createValidator, controller.create);
-  router.get(pathPrefix || '/', ...listValidator, controller.getAll);
-  router.get('/:id', ...idValidator, controller.getById);
-  router.patch('/:id', ...idValidator, ...updateValidator, controller.update);
-  router.put('/:id', ...idValidator, ...updateValidator, controller.update);
-  router.delete('/:id', controller.remove);
+  router.post(pathPrefix || '/', ...createMiddlewares, ...createValidator, controller.create);
+  router.get(pathPrefix || '/', ...listMiddlewares, ...listValidator, controller.getAll);
+  router.get('/:id', ...getByIdMiddlewares, ...idValidator, controller.getById);
+  router.patch('/:id', ...updateMiddlewares, ...idValidator, ...updateValidator, controller.update);
+  router.put('/:id', ...updateMiddlewares, ...idValidator, ...updateValidator, controller.update);
+  router.delete('/:id', ...removeMiddlewares, ...idValidator, controller.remove);
   return router;
 }
 

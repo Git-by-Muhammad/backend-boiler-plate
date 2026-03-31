@@ -16,7 +16,7 @@ async function register({ email, password, name }) {
 }
 
 async function login({ email, password }) {
-  const user = await User.findOne({ email });
+  const user = await User.findOne({ email }).select('+passwordHash');
   if (!user) {
     throw new ApiError(401, 'Invalid credentials');
   }

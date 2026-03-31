@@ -4,6 +4,7 @@ const User = require('../../models/user.model');
 const { authenticate } = require('../../middleware/auth');
 const validate = require('../../middleware/validate');
 const { updateMeSchema } = require('../../validation/user.validation');
+const { sanitizeUser } = require('../../utils/sanitize');
 
 const router = express.Router();
 
@@ -12,12 +13,7 @@ router.get('/me', authenticate, asyncHandler(async (req, res) => {
   if (!user) {
     return res.status(404).json({ message: 'User not found' });
   }
-  res.json({
-    id: user._id,
-    email: user.email,
-    name: user.name,
-    role: user.role,
-  });
+  res.json(sanitizeUser(user));
 }));
 
 router.patch('/me', authenticate, validate({ body: updateMeSchema }), asyncHandler(async (req, res) => {
@@ -29,12 +25,7 @@ router.patch('/me', authenticate, validate({ body: updateMeSchema }), asyncHandl
   if (!user) {
     return res.status(404).json({ message: 'User not found' });
   }
-  res.json({
-    id: user._id,
-    email: user.email,
-    name: user.name,
-    role: user.role,
-  });
+  res.json(sanitizeUser(user));
 }));
 
 module.exports = router;

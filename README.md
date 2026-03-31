@@ -104,6 +104,9 @@ src/
    - `JWT_SECRET`
 4. Start development server:
    - `npm run dev`
+5. (Optional) Seed initial data:
+   - `npm run seed`
+   - `npm run seed:reset` (wipes and reseeds)
 
 ## Environment Variables
 
@@ -219,6 +222,17 @@ Response format:
 - New models/modules should be pluggable with minimal boilerplate.
 - Validation schemas must remain isolated per domain to simplify evolution.
 - API versioning (`/api/v1`) must support future non-breaking expansion.
+
+## Production Hardening Notes
+
+- Sensitive fields such as `passwordHash` are sanitized from CRUD and auth responses.
+- User admin CRUD accepts `password` input and hashes it server-side before persisting.
+- RBAC is enforced per operation using route-level middlewares:
+  - `items`/`products`: public read, admin write/delete.
+  - `orders`/`tickets`: authenticated, owner-or-admin read/update/delete, owner auto-assigned on create.
+  - `blog posts/comments`: public read, authenticated create, owner-or-admin update/delete.
+- Admin diagnostics endpoint remains role-protected at `/api/v1/admin/diagnostics`.
+- Seed script creates/updates admin user and baseline test data for fast onboarding.
 
 ## Quick Usage Examples
 

@@ -11,8 +11,8 @@ function createCrudController(service) {
       res.json(doc);
     }),
     getAll: asyncHandler(async (req, res) => {
-      const { page, limit, sort, ...query } = req.query;
-      const result = await service.getAll(query, { page, limit, sort });
+      const { page, limit, sort, fields, populate, search, ...query } = req.query;
+      const result = await service.getAll(query, { page, limit, sort, fields, populate, search });
       res.json(result);
     }),
     update: asyncHandler(async (req, res) => {

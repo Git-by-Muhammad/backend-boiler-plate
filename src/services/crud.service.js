@@ -1,4 +1,5 @@
 const ApiError = require('../utils/ApiError');
+const { stripSensitiveFields } = require('../utils/sanitize');
 
 const toBooleanIfPossible = (value) => {
   if (value === 'true') return true;
@@ -34,12 +35,13 @@ const buildFilterQuery = (query = {}) => {
 function createCrudService(Model) {
   return {
     async create(body) {
-      return Model.create(body);
+      const doc = await Model.create(body);
+      return stripSensitiveFields(doc);
     },
     async getById(id) {
       const doc = await Model.findById(id);
       if (!doc) throw new ApiError(404, `${Model.modelName} not found`);
-      return doc;
+      return stripSensitiveFields(doc);
     },
     async getAll(query = {}, options = {}) {
       const { page = 1, limit = 20, sort = '-createdAt', fields, populate, search } = options;
@@ -69,12 +71,12 @@ function createCrudService(Model) {
         findQuery.sort(sort).skip(skip).limit(Number(limit)).lean(),
         Model.countDocuments(mongoQuery),
       ]);
-      return { data, total, page: Number(page), limit: Number(limit) };
+      return { data: stripSensitiveFields(data), total, page: Number(page), limit: Number(limit) };
     },
     async update(id, body) {
       const doc = await Model.findByIdAndUpdate(id, body, { new: true, runValidators: true });
       if (!doc) throw new ApiError(404, `${Model.modelName} not found`);
-      return doc;
+      return stripSensitiveFields(doc);
     },
     async remove(id) {
       const doc = await Model.findByIdAndDelete(id);
